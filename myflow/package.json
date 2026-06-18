@@ -1,0 +1,23 @@
+{
+  "name": "akamai-myflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Akamai v3 sensor_data: babelflow deobfuscation pipeline + from-scratch generator (see babelflow/generator)",
+  "type": "commonjs",
+  "scripts": {
+    "deobfuscate": "node babelflow/run.js",
+    "generate": "node babelflow/generator/generate.js --file babelflow/generator/input.json",
+    "selftest": "node babelflow/generator/generate.js --selftest",
+    "capture": "node babelflow/generator/capture.js",
+    "validate": "node babelflow/generator/validate.js",
+    "validate:observe": "node babelflow/generator/validate.js --observe"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/generator": "^7.24.0",
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "puppeteer": "^25.1.0"
+  }
+}

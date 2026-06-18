@@ -1,16 +1,16 @@
 function _Op() {
-    { } ["arguments"] = []
+    {}["arguments"] = []
     v0 = _window["navigator"]["userAgent"]["split"]("\\")["join"]("")["split"]("\"")["join"]("")
     return v0;
 }
 function _LU(v0) {
-    { } ["arguments"] = [v0]
+    {}["arguments"] = [v0]
     _FR = v0
     v0 = _FR["toString"](2)
     return v0;
 }
 function _ht(v0) {
-    { } ["arguments"] = [v0]
+    {}["arguments"] = [v0]
     _G = v0
     _Jr = undefined
     _Jr = 5381
@@ -23,7 +23,7 @@ function _ht(v0) {
     return v0;
 }
 function _Lq(v3, v2, v1, v0) {
-    { } ["arguments"] = [v3, v2, v1, v0]
+    {}["arguments"] = [v3, v2, v1, v0]
     _Gm = v3
     _A8 = v2
     _QK = v1

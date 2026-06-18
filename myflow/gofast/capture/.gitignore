@@ -1,0 +1,4 @@
+# real captures contain session cookies / PII — never commit
+capture-real*.json
+*.capture.json
+*-real*.json

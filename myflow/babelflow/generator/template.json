@@ -1,0 +1,15 @@
+{
+  "note": "v3 sensor template (minimal first POST). Device profile is fixed; input + dynamic fields are substituted by generate.js.",
+  "prefixFixed": "3;0;1;0;",
+  "section0": "507sdw6u8LbFTtvss0h4hgihxXrh1C4AsXIaDjGtJgA=",
+  "meta": "11,0,0,0,2,0",
+  "seedExample": 3621171,
+  "origInputs": {
+    "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "PageUrlHost": "www.zalando.pl/asics-sportstyle-gel-nyc-unisex-sneakersy-niskie-creamcloud-grey-a0h15o08w-a12.html",
+    "ScriptToken": "9O7mbJwzN9trX4aEkE",
+    "Locale": "pl-PL",
+    "Bmsz": "3621171"
+  },
+  "plain": "\"\"},{\"ssh\":\"507sdw6u8LbFTtvss0h4hgihxXrh1C4AsXIaDjGtJgA=\",\"fpt\":0},{\"delt\":\"\"},{\"fmz\":0},{\"ww8\":1440},{\"adp\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36\"},{\"ibr\":0},{\"sts\":2},{\"tst\":0,non:\"4531\",\"ajr\":\"\",\"oev\"://www.zalando.pl/asics-sportstyle-gel-nyc-unisex-sneakersy-niskie-creamcloud-grey-a0h15o08w-a12.html\",\"pev\":30261693},{\"jsrf\":0},{\"nal\":0,\"og\":1},{\"mevl\":\"0,0\",\"kev\":\"cpen:0,cwen:\"\",\"if\":\"PiZtE\"},{\"jsrf1\":32},{\"tevl\":\"8\",\"pde\":0},{\"wow\":0,sc:1781732946832},{\"fct\":0},{\"tc\":\"20030107\"},{\"swi\":\"9O7mbJwzN9trX4aEkE\",\"sww\":\"0\"},{\"tid\":0,x12:1,x11:\"\"}],\"o9\":0,i1:1440},{\"nps\":0,\"tab\":\"-1\"},{\"rcfp\":0,\"ffl\":0},{\"pevl\":0,vib:\";-1;dis;,7;true;true;true;-120;true;32;32;true;false;-1\",\"fpc\":0},{\"dau\":890866473416},{\"xag\":2560},{\"wih\":{},\"pnte\":\"8111\"},{\"wdr\":23887},{\"jsrf2\":\"0\"},{\"mwd\":\"\",\"mev\":0,\"nte\":\"\",\"pur\":1,opc:0},{\"ua\":0,\"mte\":1265},{\"pha\":{\"s024\":438390},{\"tsd\":32},{\"devl\":5},{\"ash\":\"https:1,bat:1,isc:\"0\"},{\"hea\":\"do_en,dm_en,t_en\",\"ffs\":0},{\"rval\":\"\",\"dme\":0,\"tcd\":1\"},{\"ran\":0},{\"tovl\":12147}],\"eem\":0},{\"ssts\":\"0,0,0,0,1897,113,0;0,-1,0,0,1125,-1,0;\",\"vev\":\"\",\"sde\":\"Gecko\"},{\"wiw\":1},{\"it\":1366},{\"hal\":[{\"kevl\":[{\"she\":[{\"fmh\":97},{\"signals\":\"\",\"pus\":\"0.422327409211\"},{\"ucs\":\"\"},{\"dvc\":0,\"sws\":19060},{\"kc\":\"\",\"doe\":1},{\"dd2\":0},{\"pc\":\"0,0,0,0,1,0,0\",\"per\":0,fc:\"\",\"mst\":0,dm:0},{\"dmvl\":\"\",\"inf\":0,\"pte\":\"sm\",\"fwd\":-1},\"te\":0,wrc:2560},{\"asw\":0},{\"nap\":\"-1\"},{\"nfas\":0,\"tev\":0,\"pmte\":\"1,109177,43,2539|109177\",\"din\":0},{\"mc\":0,\"mis\":\"0,0,0,0,1897,113,0;0,-1,0,0,1125,-1,0;\",\"ajt\":\"acjkcjfdlgYkffixywQd,5,d+g+e+b+i+j+k+c+a+\"},{\"srd\":\"0\"}]}:768},{\"hz1\":{\"ver\":\"pl-PL\"},{\"npl\""
+}
