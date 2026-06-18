@@ -171,6 +171,32 @@ func refreshEpochs(plain string, nowMs int64) (string, int) {
 	return out, n
 }
 
+var anchorEpochRe = regexp.MustCompile(`1[78]\d{11}`)
+
+// ShiftAnchor implements the coherent-replay transform (TIMING.md): keep section0/seed
+// and all relative timers/behavioral offsets, and shift ONLY the session-anchor epoch by
+// deltaMs. Replaying a captured body at time T with deltaMs = T − originalSend keeps
+// (T − anchorNew) == originalElapsed, so the elapsed field and offsets stay coherent —
+// one field changed instead of the whole timing group. Returns body, old/new anchor, and
+// how many anchor occurrences were shifted (expect 1). Risk to verify live: if section0
+// binds the anchor, shifting it invalidates section0 (then fall back to timer-shifting).
+func ShiftAnchor(sensorData string, deltaMs int64) (string, int64, int64, int, error) {
+	r := DecodeV3(sensorData)
+	if !r.OK {
+		return "", 0, 0, 0, fmt.Errorf("decode capture: %s", r.Reason)
+	}
+	anchorStr := anchorEpochRe.FindString(r.Plain)
+	if anchorStr == "" {
+		return "", 0, 0, 0, fmt.Errorf("no anchor epoch (1[78]xxxxxxxxxxx) found in plaintext")
+	}
+	anchor, _ := strconv.ParseInt(anchorStr, 10, 64)
+	newAnchor := anchor + deltaMs
+	newStr := strconv.FormatInt(newAnchor, 10)
+	plain := strings.ReplaceAll(r.Plain, anchorStr, newStr)
+	n := strings.Count(r.Plain, anchorStr)
+	return r.Prefix + encodeV3(r.Section0, r.Meta, r.Seed, plain), anchor, newAnchor, n, nil
+}
+
 // Regen is capture-assisted generation: decode a real captured sensor_data, keep its
 // section0/meta/seed (section0 is server-checked and session-stable, so it must be a
 // real one), refresh the dynamic ms-epoch timestamp(s) to nowMs, and re-encode. Unlike

@@ -9,6 +9,7 @@
 //	gofast capture-analyze <f>  # cross-ref a real-Chrome capture-real.json
 //	gofast regen <f>    # capture -> refresh sc -> re-encode: a ready-to-POST sensor
 //	gofast timemap <f>  # model the timing fields (anchor / elapsed / static) in a capture
+//	gofast shift <f>    # coherent-replay: shift the anchor so a captured body is fresh now
 //
 // See WORKFLOW.md for the full roadmap. Deobfuscation covers phase 2; generate/
 // selftest cover phases 5 & 7 (the cipher is solved; an *accepted* sensor still
