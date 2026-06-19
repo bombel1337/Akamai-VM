@@ -1,4 +1,5 @@
-# real captures contain session cookies / PII — never commit
+# real captures / harvests contain session cookies + PII — never commit
 capture-real*.json
+harvest*.json
 *.capture.json
 *-real*.json

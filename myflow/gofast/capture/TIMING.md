@@ -19,19 +19,31 @@ It bumped the **anchor** (a session constant) to `now` per-POST. That destroyed 
 said "~1.3s since start" while the anchor now said "start = now" → incoherent → `_abck`
 stuck at `-1`. The anchor is **not** the field to touch.
 
-## The coherent-refresh hypothesis (next experiment)
-To replay/age a captured POST at a new send time `T`:
+## Anchor-shift — TRIED, FAILED (2026-06-19)
+Hypothesis: shift only the anchor by `delta = T − originalSend`, keep elapsed/offsets.
+Result: hook `replay` mode → `_abck` stuck at `-1` over 12 posts. **Disproven.**
+Why: anchor-shift keeps `elapsed` *constant* while real session time advances, so the body
+claims it was generated ~Xms after page-load yet arrives 20s+ into the session. The server
+tracks session age and expects `elapsed` to **grow**; lying about `navigationStart` (which
+it can cross-check against session start) is rejected. (`sensor.ShiftAnchor`/`gofast shift`
+remain as the disproven reference; don't use for generation.)
+
+## The corrected transform — timer-shift (next experiment)
+Keep the anchor (the real `navigationStart`); **grow `elapsed` by `delta`** so it matches
+real session age:
 ```
-delta = T − originalSend           # originalSend = capture's post.t
-keep:   anchor, section0, seed, static tokens
-shift:  every elapsed timer and behavioral offset by +delta
-        (so newElapsed = originalElapsed + delta = T − anchor)
+delta = T − originalSend
+keep:  anchor, section0, seed, meta, static tokens, historical behavioral offsets
+add delta to: the "current elapsed" / sampling-time markers (the tight band near elapsed)
 ```
-This preserves internal ordering/gaps while making overall freshness match `T`. The open
-risk: reliably **finding all** timing tokens to shift, given the transposition mixes them
-with non-time numbers. `gofast timemap` surfaces the window (`NearElapsed`), but it also
-catches non-time values in range — distinguishing them is the remaining work (e.g. shift
-candidates, re-encode, test acceptance; binary-search which must move together).
+Then `T − anchor = originalElapsed + delta = elapsed_new` — coherent with a body genuinely
+generated at `T`, and section0/anchor untouched. `timemap`'s **tight band** is the candidate
+set to advance (historical event offsets stay; only the sampling clock moves).
+
+**Two open risks (verify live):** (1) reliably identifying the sampling-time markers vs
+coincidental tokens in the tight band; (2) **behavioral anti-replay** — reusing identical
+mouse/key traces across many POSTs may be flagged regardless of timing. Both may mean the
+only robust source of valid bodies is **fresh `passthrough` capture** (the harvester).
 
 ## Reproduce
 ```sh

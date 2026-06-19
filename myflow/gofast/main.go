@@ -10,6 +10,7 @@
 //	gofast regen <f>    # capture -> refresh sc -> re-encode: a ready-to-POST sensor
 //	gofast timemap <f>  # model the timing fields (anchor / elapsed / static) in a capture
 //	gofast shift <f>    # coherent-replay: shift the anchor so a captured body is fresh now
+//	gofast harvest <f>  # harvest.json -> validate + emit a ready-to-POST curl (the working path)
 //
 // See WORKFLOW.md for the full roadmap. Deobfuscation covers phase 2; generate/
 // selftest cover phases 5 & 7 (the cipher is solved; an *accepted* sensor still
@@ -24,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"gofast/pipeline"
@@ -60,6 +62,10 @@ func main() {
 		err = runRegen(os.Args[2:])
 	case "timemap":
 		err = runTimeMap(os.Args[2:])
+	case "shift":
+		err = runShift(os.Args[2:])
+	case "harvest":
+		err = runHarvest(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "gofast: unknown subcommand %q (want: deobfuscate | generate | selftest)\n", cmd)
 		os.Exit(2)
@@ -243,6 +249,124 @@ func runRegen(args []string) error {
 	fmt.Fprintf(os.Stderr, "regen: refreshed %d ms-epoch timestamp(s)\n", n)
 	if n == 0 {
 		fmt.Fprintln(os.Stderr, "regen: WARNING — no timestamp refreshed; output is byte-identical (= replay)")
+	}
+	fmt.Println(out)
+	return nil
+}
+
+// runHarvest validates a harvested fresh body and emits a ready-to-POST curl. This is
+// the proven path (only fresh, unmodified bodies pass). It warns if the body is already
+// old, since timing is checked against session age.
+func runHarvest(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: gofast harvest <harvest.json | capture-real.json>")
+	}
+	raw, err := os.ReadFile(args[0])
+	if err != nil {
+		return fmt.Errorf("read %s: %w", args[0], err)
+	}
+	h, err := sensor.ParseHarvest(raw)
+	if err != nil {
+		return err
+	}
+	body := sensor.ExtractSensorData(h.Body)
+	dec := sensor.DecodeV3(body)
+	if !dec.OK {
+		return fmt.Errorf("harvested body does not decode: %s", dec.Reason)
+	}
+	fmt.Fprintf(os.Stderr, "harvest: endpoint=%s\n", h.URL)
+	fmt.Fprintf(os.Stderr, "harvest: decoded OK (seed=%d section0=%s)\n", dec.Seed, dec.Section0)
+
+	// The harvested cookies often already hold a VALID _abck (the session passed in the
+	// browser) — frequently the real deliverable: reuse the cookies, no POST needed.
+	if ab := cookieValue(h.Cookie, "_abck"); ab != "" {
+		status := "?"
+		if parts := strings.Split(ab, "~"); len(parts) > 1 {
+			status = parts[1]
+		}
+		if status == "0" {
+			fmt.Fprintf(os.Stderr, "harvest: _abck status=~0~  ✓ VALID — for automation, reuse these cookies directly (no POST needed)\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "harvest: _abck status=~%s~  (not valid yet — browse longer until status=0, then re-harvest)\n", status)
+		}
+	}
+	if h.T > 0 { // body age only matters for the POST-the-sensor path below
+		age := time.Now().UnixMilli() - h.T
+		warn := ""
+		if age > 30000 {
+			warn = "  ⚠ likely STALE for re-POSTing (timing vs session age); for the curl path, harvest+POST back-to-back"
+		}
+		fmt.Fprintf(os.Stderr, "harvest: body age=%dms%s\n", age, warn)
+	}
+	if h.URL == "" {
+		return fmt.Errorf("no endpoint URL in harvest (need harvest.json from __harvest())")
+	}
+
+	// Emit a ready-to-POST curl. Headers/cookies should match a real request (copy from
+	// DevTools if the POST is rejected); _abck is httpOnly so it won't be in h.Cookie.
+	fmt.Printf("curl '%s' \\\n", h.URL)
+	fmt.Printf("  -X POST \\\n")
+	fmt.Printf("  -H 'content-type: text/plain;charset=UTF-8' \\\n")
+	if h.UA != "" {
+		fmt.Printf("  -H 'user-agent: %s' \\\n", h.UA)
+	}
+	if h.Cookie != "" {
+		fmt.Printf("  -H 'cookie: %s' \\\n", h.Cookie)
+	}
+	fmt.Printf("  --data-raw '%s'\n", strings.ReplaceAll(h.Body, "'", `'\''`))
+	return nil
+}
+
+// cookieValue extracts a cookie's value from a "k=v; k2=v2" cookie string.
+func cookieValue(cookie, name string) string {
+	for _, p := range strings.Split(cookie, ";") {
+		p = strings.TrimSpace(p)
+		if strings.HasPrefix(p, name+"=") {
+			return p[len(name)+1:]
+		}
+	}
+	return ""
+}
+
+// runShift implements coherent-replay (TIMING.md): take the latest POST from a capture
+// and shift its anchor so the body is coherent for a send at --at (default now). Prints
+// the ready-to-POST sensor_data to stdout and a summary to stderr.
+func runShift(args []string) error {
+	var path string
+	var atMs int64 = time.Now().UnixMilli()
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--at" && i+1 < len(args) {
+			if n, e := strconv.ParseInt(args[i+1], 10, 64); e == nil {
+				atMs = n
+			}
+			i++
+		} else if path == "" {
+			path = args[i]
+		}
+	}
+	if path == "" {
+		return fmt.Errorf("usage: gofast shift <capture-real.json> [--at <ms>]")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	capData, err := sensor.ParseCapture(raw)
+	if err != nil || len(capData.Posts) == 0 {
+		return fmt.Errorf("need a capture-real.json with at least one POST")
+	}
+	last := capData.Posts[len(capData.Posts)-1]
+	origSend := last.T
+	delta := atMs - origSend
+
+	out, oldA, newA, n, err := sensor.ShiftAnchor(sensor.ExtractSensorData(last.Body), delta)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "shift: origSend=%d at=%d delta=%dms | anchor %d -> %d (%d occurrence shifted)\n",
+		origSend, atMs, delta, oldA, newA, n)
+	if delta == 0 {
+		fmt.Fprintln(os.Stderr, "shift: delta=0 (body is byte-identical = passthrough); pass --at <future ms> or run later")
 	}
 	fmt.Println(out)
 	return nil

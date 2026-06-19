@@ -50,8 +50,29 @@ browser Akamai trusts — whether our pipeline is accepted. Set a mode then relo
 Watch the `[abck]` console line: `status=-1` is invalid, `status` becoming `0`/positive is
 **ACCEPTED**. (`_abck` may be httpOnly — read it in DevTools → Application → Cookies.)
 
+## Harvesting valid sensors (the working path)
+Probing established that **only fresh, unmodified bodies pass** — `passthrough` validates,
+but every offline edit (`regen` timestamp, `replay` anchor-shift) is rejected because the
+server checks timing against real session age (see [TIMING.md](TIMING.md)). So the reliable
+product is a **harvester**, not an offline synthesizer:
+
+1. Run in **capture mode** (default), let the page POST a sensor normally.
+2. Console: `__harvest()` → downloads `harvest.json` (freshest body + endpoint + cookies).
+3. Turn it into a request:
+   ```sh
+   go run . harvest capture/harvest.json     # prints a ready-to-POST curl (+ freshness check)
+   ```
+4. **POST it promptly** — `harvest` warns if the body is already stale (>30s); timing is
+   checked against session age.
+
+Caveats: a single body is one sensor in a sequence — Akamai's `_abck` usually validates over
+several POSTs, so harvested bodies are most useful POSTed within the **same session** they
+came from. For automation that just needs a valid `_abck`, the simplest harvest is to let the
+browser session reach `status=0`, then reuse the resulting `_abck`/`bm_sz` cookies directly.
+
 ## Safety
 - Only run against sites you are authorized to test.
 - The cipher in this userscript mirrors [../sensor/cipher.go](../sensor/cipher.go); keep them
   in sync if either changes.
-- `capture-real.json` contains your session cookies — do not commit it.
+- `capture-real.json` / `harvest.json` contain your session cookies — **never commit them**
+  (covered by [.gitignore](.gitignore)).

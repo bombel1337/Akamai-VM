@@ -38,6 +38,31 @@ type Capture struct {
 	UA string `json:"ua"`
 }
 
+// Harvest is the single freshest body exported by the hook's __harvest() — the working
+// path (only fresh bodies pass), ready for immediate POST.
+type Harvest struct {
+	URL         string `json:"url"`
+	Body        string `json:"body"`
+	UA          string `json:"ua"`
+	Cookie      string `json:"cookie"`
+	T           int64  `json:"t"`           // when the sensor was sent in-browser
+	HarvestedAt int64  `json:"harvestedAt"` // when __harvest() ran
+}
+
+// ParseHarvest reads a harvest.json, or falls back to the latest POST of a full capture.
+func ParseHarvest(raw []byte) (*Harvest, error) {
+	var h Harvest
+	if err := json.Unmarshal(raw, &h); err == nil && h.Body != "" && h.URL != "" {
+		return &h, nil
+	}
+	c, err := ParseCapture(raw)
+	if err != nil || len(c.Posts) == 0 {
+		return nil, fmt.Errorf("not a harvest.json and no POSTs in capture")
+	}
+	p := c.Posts[len(c.Posts)-1]
+	return &Harvest{URL: p.URL, Body: p.Body, UA: c.UA, Cookie: p.Cookie, T: p.T}, nil
+}
+
 // ParseCapture unmarshals an exported capture-real.json.
 func ParseCapture(raw []byte) (*Capture, error) {
 	var c Capture
