@@ -153,12 +153,12 @@ func Generate(input SensorInput, nowMs int64) (string, error) {
 // epochRe matches a maximal digit run; Regen filters for 13-digit ms-epochs by value.
 var digitRunRe = regexp.MustCompile(`\d+`)
 
-// refreshEpochs replaces every 13-digit ms-epoch-looking number (1[78]xxxxxxxxxxx,
+
+func refreshEpochs(plain string, nowMs int64) (string, int) {// refreshEpochs replaces every 13-digit ms-epoch-looking number (1[78]xxxxxxxxxxx,
 // i.e. 2023–2027) with nowMs. We target by VALUE, not by the `sc:` label, because the
 // transposed plaintext de-correlates labels from values (the `sc:` label sits next to
 // junk while the real timestamp is in another slot). delta keeps relative offsets if
 // you later want multiple timestamps staggered; for now all move to nowMs.
-func refreshEpochs(plain string, nowMs int64) (string, int) {
 	now := strconv.FormatInt(nowMs, 10)
 	n := 0
 	out := digitRunRe.ReplaceAllStringFunc(plain, func(run string) string {

@@ -11,6 +11,7 @@
 //	gofast timemap <f>  # model the timing fields (anchor / elapsed / static) in a capture
 //	gofast shift <f>    # coherent-replay: shift the anchor so a captured body is fresh now
 //	gofast harvest <f>  # harvest.json -> validate + emit a ready-to-POST curl (the working path)
+//	gofast serve        # HTTP API: POST /sensor with an input.json body -> sensor_data string
 //
 // See WORKFLOW.md for the full roadmap. Deobfuscation covers phase 2; generate/
 // selftest cover phases 5 & 7 (the cipher is solved; an *accepted* sensor still
@@ -66,8 +67,10 @@ func main() {
 		err = runShift(os.Args[2:])
 	case "harvest":
 		err = runHarvest(os.Args[2:])
+	case "serve":
+		err = runServe(os.Args[2:])
 	default:
-		fmt.Fprintf(os.Stderr, "gofast: unknown subcommand %q (want: deobfuscate | generate | selftest)\n", cmd)
+		fmt.Fprintf(os.Stderr, "gofast: unknown subcommand %q (want: deobfuscate | generate | selftest | serve)\n", cmd)
 		os.Exit(2)
 	}
 	if err != nil {
